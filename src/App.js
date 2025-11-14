@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, RotateCcw, History, Trophy, Target } from 'lucide-react';
-import './App.css';
+import { Play, RotateCcw, History, Trophy } from 'lucide-react';
 
 const PLAYER_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2'];
 const PLAYER_AVATARS = ['🐯', '🦁', '🐘', '🐫', '🐴', '🐼', '🦓', '🦅'];
@@ -9,7 +8,7 @@ const ALL_PLAYERS = PRESET_NAMES.map((name, idx) => ({
   id: idx, name: name, color: PLAYER_COLORS[idx], avatar: PLAYER_AVATARS[idx]
 }));
 
-export default function CallBridgeScoreKeeper() {
+export default function App() {
   const [gameState, setGameState] = useState('setup');
   const [totalLeads, setTotalLeads] = useState(13);
   const [winningScore, setWinningScore] = useState(15);
@@ -52,7 +51,7 @@ export default function CallBridgeScoreKeeper() {
   };
 
   const initializeRound = () => {
-    setCurrentRound(players.map(p => ({ playerId: p.id, call: '', scored: '' })));
+    setCurrentRound(players.map(p => ({ playerId: p.id, call: 0, scored: 0 })));
     setCallError(''); setScoredError(''); setCallsLocked(false);
   };
 
@@ -60,13 +59,13 @@ export default function CallBridgeScoreKeeper() {
     setCurrentRound(prev => {
       let maxScored = totalLeads;
       if (field === 'scored') {
-        const totalCalls = prev.reduce((sum, r) => sum + (r.call === '' ? 0 : parseInt(r.call)), 0);
-        const currentTotalScored = prev.reduce((sum, r) => r.playerId === playerId ? sum : sum + (r.scored === '' ? 0 : parseInt(r.scored)), 0);
+        const totalCalls = prev.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0);
+        const currentTotalScored = prev.reduce((sum, r) => r.playerId === playerId ? sum : sum + (typeof r.scored === 'number' ? r.scored : 0), 0);
         maxScored = Math.min(totalLeads, totalCalls - currentTotalScored);
       }
       const updatedRound = prev.map(r => {
         if (r.playerId === playerId) {
-          const currentVal = r[field] === '' ? 0 : parseInt(r[field]);
+          const currentVal = typeof r[field] === 'number' ? r[field] : 0;
           let newVal = Math.max(0, Math.min(field === 'scored' ? maxScored : totalLeads, currentVal + delta));
           return { ...r, [field]: newVal };
         }
@@ -79,11 +78,11 @@ export default function CallBridgeScoreKeeper() {
   };
 
   const handleDirectInput = (playerId, field, value) => {
-    let numValue = value === '' ? '' : Math.max(0, Math.min(totalLeads, parseInt(value) || 0));
+    let numValue = value === '' ? 0 : Math.max(0, Math.min(totalLeads, parseInt(value) || 0));
     setCurrentRound(prev => {
-      if (field === 'scored' && numValue !== '') {
-        const totalCalls = prev.reduce((sum, r) => sum + (r.call === '' ? 0 : parseInt(r.call)), 0);
-        const currentTotalScored = prev.reduce((sum, r) => r.playerId === playerId ? sum : sum + (r.scored === '' ? 0 : parseInt(r.scored)), 0);
+      if (field === 'scored' && numValue !== 0) {
+        const totalCalls = prev.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0);
+        const currentTotalScored = prev.reduce((sum, r) => r.playerId === playerId ? sum : sum + (typeof r.scored === 'number' ? r.scored : 0), 0);
         numValue = Math.min(numValue, totalCalls - currentTotalScored);
       }
       const updatedRound = prev.map(r => r.playerId === playerId ? { ...r, [field]: numValue } : r);
@@ -94,8 +93,8 @@ export default function CallBridgeScoreKeeper() {
   };
 
   const calculateRoundScore = (call, scored) => {
-    const callNum = call === '' ? 0 : parseInt(call);
-    const scoredNum = scored === '' ? 0 : parseInt(scored);
+    const callNum = typeof call === 'number' ? call : parseInt(call);
+    const scoredNum = typeof scored === 'number' ? scored : parseInt(scored);
     if (callNum === 0 && scoredNum > 0) return -scoredNum;
     const halfOrMore = callNum >= totalLeads / 2;
     if (scoredNum > callNum) return halfOrMore ? -(callNum + 2) : -callNum;
@@ -104,9 +103,9 @@ export default function CallBridgeScoreKeeper() {
   };
 
   const lockCalls = () => {
-    if (currentRound.some(r => r.call === '')) { alert('Please enter call values for all players'); return; }
-    const totalCalls = currentRound.reduce((sum, r) => sum + parseInt(r.call), 0);
-    const minCalls = totalLeads - 2; const maxCalls = totalLeads + 4;
+    const totalCalls = currentRound.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0);
+    const minCalls = totalLeads - 2; 
+    const maxCalls = totalLeads + 4;
     if (totalCalls < minCalls || totalCalls > maxCalls) { 
       setCallError(`Total calls must be between ${minCalls} and ${maxCalls}`);
       alert(`Total calls must be between ${minCalls} and ${maxCalls}`); 
@@ -118,12 +117,11 @@ export default function CallBridgeScoreKeeper() {
 
   const submitRound = () => {
     if (!callsLocked) { alert('Please lock calls before submitting the round'); return; }
-    if (currentRound.some(r => r.scored === '')) { alert('Please enter scored values for all players'); return; }
-    const totalScored = currentRound.reduce((sum, r) => sum + parseInt(r.scored), 0);
-    const totalCalls = currentRound.reduce((sum, r) => sum + parseInt(r.call), 0);
+    const totalScored = currentRound.reduce((sum, r) => sum + (typeof r.scored === 'number' ? r.scored : 0), 0);
+    const totalCalls = currentRound.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0);
     if (totalScored > totalCalls) { alert(`Total scored (${totalScored}) cannot exceed total calls (${totalCalls})`); return; }
     if (totalScored !== totalLeads) { alert(`Total scored must equal ${totalLeads} leads`); return; }
-    const roundResults = currentRound.map(r => ({ ...r, call: parseInt(r.call), scored: parseInt(r.scored), roundScore: calculateRoundScore(r.call, r.scored) }));
+    const roundResults = currentRound.map(r => ({ ...r, call: typeof r.call === 'number' ? r.call : parseInt(r.call), scored: typeof r.scored === 'number' ? r.scored : parseInt(r.scored), roundScore: calculateRoundScore(r.call, r.scored) }));
     const updatedPlayers = players.map(p => {
       const result = roundResults.find(r => r.playerId === p.id);
       return { ...p, totalScore: p.totalScore + result.roundScore };
@@ -158,15 +156,31 @@ export default function CallBridgeScoreKeeper() {
                 <div className="grid grid-cols-2 gap-2">
                   {ALL_PLAYERS.map((player) => {
                     const isSelected = selectedPlayerIds.includes(player.id);
+                    const selectedPlayer = players.find(p => p.id === player.id);
                     return (
-                      <button key={player.id} onClick={() => togglePlayerSelection(player.id)}
-                        className={`p-3 rounded-xl transition-all ${isSelected ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg scale-105' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                      <div key={player.id}
+                        className={`p-3 rounded-xl transition-all ${isSelected ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
                         <div className="flex items-center gap-2">
-                          <div className={`w-8 h-8 rounded-full flex-shrink-0 shadow flex items-center justify-center text-xl ${isSelected ? 'opacity-100' : 'opacity-60'}`}
-                            style={{ backgroundColor: isSelected ? 'white' : player.color }}>{player.avatar}</div>
-                          <span className="font-bold text-sm truncate">{player.name}</span>
+                          <button onClick={() => togglePlayerSelection(player.id)} className="flex-shrink-0">
+                            <div className={`w-8 h-8 rounded-full shadow flex items-center justify-center text-xl ${isSelected ? 'opacity-100' : 'opacity-60'}`}
+                              style={{ backgroundColor: isSelected ? 'white' : player.color }}>{player.avatar}</div>
+                          </button>
+                          {isSelected && selectedPlayer ? (
+                            <input
+                              type="text"
+                              value={selectedPlayer.name}
+                              onChange={(e) => handlePlayerNameChange(player.id, e.target.value)}
+                              className="flex-1 px-2 py-0 bg-white bg-opacity-90 text-gray-800 border-0 rounded font-bold text-sm focus:ring-1 focus:ring-white min-w-0"
+                              style={{ height: '24px', lineHeight: '24px' }}
+                              placeholder="Name"
+                            />
+                          ) : (
+                            <button onClick={() => togglePlayerSelection(player.id)} className="flex-1 text-left min-w-0">
+                              <span className="font-bold text-sm truncate block">{player.name}</span>
+                            </button>
+                          )}
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -196,20 +210,6 @@ export default function CallBridgeScoreKeeper() {
                     className="w-12 h-12 bg-white rounded-xl font-bold text-xl text-gray-600 hover:bg-gray-50 active:scale-95 transition-transform shadow">+</button>
                 </div>
               </div>
-              {players.length > 0 && (
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-3">Edit Player Names (Optional)</label>
-                  <div className="space-y-2">
-                    {players.map((player) => (
-                      <div key={player.id} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full flex-shrink-0 shadow-lg flex items-center justify-center text-2xl" style={{ backgroundColor: player.color }}>{player.avatar}</div>
-                        <input type="text" value={player.name} onChange={(e) => handlePlayerNameChange(player.id, e.target.value)}
-                          className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent text-lg font-semibold" />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
               <button onClick={startGame} disabled={players.length < 3}
                 className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-white py-4 rounded-2xl font-bold text-lg hover:from-emerald-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed">
                 <Play size={24} fill="white" />Start Game
@@ -236,7 +236,7 @@ export default function CallBridgeScoreKeeper() {
             </div>
             <div className="space-y-2 mb-6">
               {[...players].sort((a, b) => b.totalScore - a.totalScore).map((player, idx) => (
-                <div key={player.id} className="flex items-center gap-3 p-4 rounded-2xl shadow-lg" style={{ backgroundColor: `${player.color}30` }}>
+                <div key={player.id} className="flex items-center gap-3 p-4 rounded-2xl shadow-lg" style={{ backgroundColor: player.color + '30' }}>
                   <span className="text-2xl font-black text-gray-600 w-8">#{idx + 1}</span>
                   <div className="w-12 h-12 rounded-full shadow-md flex items-center justify-center text-2xl" style={{ backgroundColor: player.color }}>{player.avatar}</div>
                   <span className="font-bold text-lg flex-1">{player.name}</span>
@@ -258,42 +258,34 @@ export default function CallBridgeScoreKeeper() {
       <div className="max-w-md mx-auto">
         <div className="bg-white rounded-3xl shadow-2xl p-4 mb-4">
           <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl font-black text-gray-800">Round {scoreHistory.length + 1}</h1>
-            <div className="flex gap-2">
-              <button onClick={() => setShowHistory(!showHistory)}
-                className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl font-bold hover:from-blue-600 hover:to-indigo-600 transition-all shadow-lg active:scale-95">
-                <History size={18} />
-              </button>
-              <button onClick={resetGame}
-                className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-xl font-bold hover:from-red-600 hover:to-pink-600 transition-all shadow-lg active:scale-95">
-                <RotateCcw size={18} />
-              </button>
-            </div>
+            <button onClick={() => setShowHistory(!showHistory)}
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-xl font-bold hover:from-blue-600 hover:to-indigo-600 transition-all shadow-lg active:scale-95 flex items-center gap-2">
+              <History size={18} />
+              History
+            </button>
+            <button onClick={resetGame}
+              className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-xl font-bold hover:from-red-600 hover:to-pink-600 transition-all shadow-lg active:scale-95 flex items-center gap-2">
+              <RotateCcw size={18} />
+              Reset
+            </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {players.map(player => (
-              <div key={player.id} className="p-3 rounded-2xl shadow-lg" style={{ backgroundColor: `${player.color}30` }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-6 h-6 rounded-full shadow flex items-center justify-center text-sm" style={{ backgroundColor: player.color }}>{player.avatar}</div>
-                  <span className="font-bold text-sm truncate">{player.name}</span>
-                </div>
-                <div className="text-3xl font-black text-gray-800">{player.totalScore}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-white rounded-3xl shadow-2xl p-4 mb-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4 items-center">
             <div className="text-center">
               <div className="text-xs font-bold text-gray-500 mb-1">TOTAL CALLS</div>
               <div className="text-3xl font-black text-emerald-600">
-                {currentRound.reduce((sum, r) => sum + (r.call === '' ? 0 : parseInt(r.call)), 0)}/{totalLeads}
+                {currentRound.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0)}/{totalLeads}
+              </div>
+            </div>
+            <div className="flex flex-col items-center">
+              <div className="text-sm font-black text-gray-600 mb-2">ROUND {scoreHistory.length + 1}</div>
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-full">
+                <Trophy className="text-white" size={32} />
               </div>
             </div>
             <div className="text-center">
               <div className="text-xs font-bold text-gray-500 mb-1">TOTAL SCORED</div>
-              <div className={`text-3xl font-black ${currentRound.reduce((sum, r) => sum + (r.scored === '' ? 0 : parseInt(r.scored)), 0) > totalLeads ? 'text-red-600' : 'text-cyan-600'}`}>
-                {currentRound.reduce((sum, r) => sum + (r.scored === '' ? 0 : parseInt(r.scored)), 0)}/{totalLeads}
+              <div className={`text-3xl font-black ${currentRound.reduce((sum, r) => sum + (typeof r.scored === 'number' ? r.scored : 0), 0) > totalLeads ? 'text-red-600' : 'text-cyan-600'}`}>
+                {currentRound.reduce((sum, r) => sum + (typeof r.scored === 'number' ? r.scored : 0), 0)}/{totalLeads}
               </div>
             </div>
           </div>
@@ -369,48 +361,56 @@ export default function CallBridgeScoreKeeper() {
           </div>
         )}
 
-        <div className="space-y-3">
-          {currentRound.map(round => {
-            const player = players.find(p => p.id === round.playerId);
-            return (
-              <div key={round.playerId} className="bg-white rounded-3xl shadow-2xl p-4" style={{ borderLeft: `6px solid ${player.color}` }}>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-2xl" style={{ backgroundColor: player.color }}>{player.avatar}</div>
-                  <span className="font-black text-lg">{player.name}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><Target size={14} />CALL</label>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => adjustValue(round.playerId, 'call', -1)} disabled={callsLocked}
-                        className="w-10 h-10 bg-gray-100 rounded-xl font-bold text-lg text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">−</button>
-                      <input type="number" min="0" max={totalLeads} value={round.call} onChange={(e) => handleDirectInput(round.playerId, 'call', e.target.value)} disabled={callsLocked}
-                        className="flex-1 text-center text-2xl font-black py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed" />
-                      <button onClick={() => adjustValue(round.playerId, 'call', 1)} disabled={callsLocked}
-                        className="w-10 h-10 bg-gray-100 rounded-xl font-bold text-lg text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">+</button>
+        <div className="space-y-2">
+          {[...currentRound]
+            .map(round => {
+              const player = players.find(p => p.id === round.playerId);
+              return { ...round, player, currentScore: player.totalScore };
+            })
+            .sort((a, b) => b.currentScore - a.currentScore)
+            .map(({ playerId, call, scored, player }) => {
+              return (
+                <div key={playerId} className="bg-white rounded-2xl shadow-lg p-3 border-l-4" style={{ 
+                  borderLeftColor: player.color
+                }}>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0 w-32">
+                      <div className="w-8 h-8 rounded-full shadow-md flex items-center justify-center text-lg" style={{ backgroundColor: player.color }}>{player.avatar}</div>
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-black text-sm text-gray-800 truncate">{player.name}</span>
+                        <span className="text-xs font-bold text-gray-500">Score: {player.totalScore}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => adjustValue(playerId, 'call', -1)} disabled={callsLocked}
+                          className="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-700 hover:bg-gray-200 active:scale-95 transition-transform disabled:opacity-30 disabled:cursor-not-allowed">−</button>
+                        <input type="number" min="0" max={totalLeads} value={call} onChange={(e) => handleDirectInput(playerId, 'call', e.target.value)} disabled={callsLocked}
+                          className="w-12 text-center text-lg font-black py-1 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-400 focus:border-transparent bg-white disabled:bg-gray-100 disabled:cursor-not-allowed" />
+                        <button onClick={() => adjustValue(playerId, 'call', 1)} disabled={callsLocked}
+                          className="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-700 hover:bg-gray-200 active:scale-95 transition-transform disabled:opacity-30 disabled:cursor-not-allowed">+</button>
+                      </div>
+                      <div className="w-px h-8 bg-gray-200"></div>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => adjustValue(playerId, 'scored', -1)}
+                          className="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-700 hover:bg-gray-200 active:scale-95 transition-transform">−</button>
+                        <input type="number" min="0" max={totalLeads} value={scored} onChange={(e) => handleDirectInput(playerId, 'scored', e.target.value)}
+                          className="w-12 text-center text-lg font-black py-1 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-transparent bg-white" />
+                        <button onClick={() => adjustValue(playerId, 'scored', 1)}
+                          className="w-8 h-8 bg-gray-100 rounded-lg font-bold text-gray-700 hover:bg-gray-200 active:scale-95 transition-transform">+</button>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-2 flex items-center gap-1"><Trophy size={14} />SCORED</label>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => adjustValue(round.playerId, 'scored', -1)}
-                        className="w-10 h-10 bg-gray-100 rounded-xl font-bold text-lg text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform">−</button>
-                      <input type="number" min="0" max={totalLeads} value={round.scored} onChange={(e) => handleDirectInput(round.playerId, 'scored', e.target.value)}
-                        className="flex-1 text-center text-2xl font-black py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-transparent" />
-                      <button onClick={() => adjustValue(round.playerId, 'scored', 1)}
-                        className="w-10 h-10 bg-gray-100 rounded-xl font-bold text-lg text-gray-600 hover:bg-gray-200 active:scale-95 transition-transform">+</button>
-                    </div>
-                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-gray-900 to-transparent">
           <div className="max-w-md mx-auto">
             {!callsLocked ? (
               <button onClick={lockCalls}
-                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-4 rounded-2xl font-black text-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-2">
+                disabled={currentRound.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0) < totalLeads - 2}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-4 rounded-2xl font-black text-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:opacity-50">
                 🔒 Lock Calls
               </button>
             ) : (
