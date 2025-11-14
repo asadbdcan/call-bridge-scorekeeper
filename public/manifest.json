@@ -1,7 +1,7 @@
 {
   "short_name": "Call Bridge",
   "name": "Call Bridge Score Keeper",
-  "description": "Keep score for your Call Bridge card games",
+  "description": "Keep score for Call Bridge card games",
   "icons": [
     {
       "src": "icon-192.png",
@@ -19,6 +19,6 @@
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#10b981",
-  "background_color": "#ffffff",
+  "background_color": "#10b981",
   "orientation": "portrait"
 }
