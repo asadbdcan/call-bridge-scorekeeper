@@ -1,4 +1,8 @@
-// src/App.js - Complete Latest Version
+// ====================================================================
+// FILE: src/App.js
+// Complete Call Bridge Score Keeper - Latest Version
+// ====================================================================
+
 import React, { useState, useEffect } from 'react';
 import { Play, RotateCcw, History, Trophy } from 'lucide-react';
 
@@ -10,6 +14,7 @@ const ALL_PLAYERS = PRESET_NAMES.map((name, idx) => ({
 }));
 
 export default function App() {
+  // State management
   const [gameState, setGameState] = useState('setup');
   const [totalLeads, setTotalLeads] = useState(13);
   const [winningScore, setWinningScore] = useState(15);
@@ -25,6 +30,7 @@ export default function App() {
   const [scoredError, setScoredError] = useState('');
   const [callsLocked, setCallsLocked] = useState(false);
 
+  // Update players when selection changes
   useEffect(() => {
     const selectedPlayers = selectedPlayerIds.map(id => ALL_PLAYERS.find(p => p.id === id)).filter(p => p).map(p => ({ ...p, totalScore: 0 }));
     setPlayers(selectedPlayers);
@@ -32,6 +38,7 @@ export default function App() {
     if (totalLeads > maxLeads && maxLeads > 0) setTotalLeads(maxLeads);
   }, [selectedPlayerIds, totalLeads]);
 
+  // Player selection toggle
   const togglePlayerSelection = (playerId) => {
     setSelectedPlayerIds(prev => {
       if (prev.includes(playerId)) {
@@ -44,12 +51,14 @@ export default function App() {
     });
   };
 
+  // Handle player name change (max 6 chars, alphanumeric only)
   const handlePlayerNameChange = (id, name) => {
     const cleanName = name.replace(/[^a-zA-Z0-9]/g, '');
     const limitedName = cleanName.slice(0, 6);
     setPlayers(players.map(p => p.id === id ? { ...p, name: limitedName } : p));
   };
 
+  // Start game validation
   const startGame = () => {
     if (players.some(p => !p.name.trim())) { alert('Please enter all player names'); return; }
     const uniqueNames = new Set(players.map(p => p.name.trim().toLowerCase()));
@@ -58,11 +67,13 @@ export default function App() {
     initializeRound();
   };
 
+  // Initialize new round
   const initializeRound = () => {
     setCurrentRound(players.map(p => ({ playerId: p.id, call: 0, scored: 0 })));
     setCallError(''); setScoredError(''); setCallsLocked(false);
   };
 
+  // Adjust call/scored values with +/- buttons
   const adjustValue = (playerId, field, delta) => {
     setCurrentRound(prev => {
       let maxScored = totalLeads;
@@ -84,6 +95,7 @@ export default function App() {
     });
   };
 
+  // Handle direct input in number fields
   const handleDirectInput = (playerId, field, value) => {
     let numValue = value === '' ? 0 : Math.max(0, Math.min(totalLeads, parseInt(value) || 0));
     setCurrentRound(prev => {
@@ -98,6 +110,7 @@ export default function App() {
     });
   };
 
+  // Calculate round score based on call and scored
   const calculateRoundScore = (call, scored) => {
     const callNum = typeof call === 'number' ? call : parseInt(call);
     const scoredNum = typeof scored === 'number' ? scored : parseInt(scored);
@@ -108,6 +121,7 @@ export default function App() {
     else return halfOrMore ? -(callNum + 2) : -callNum;
   };
 
+  // Lock calls validation
   const lockCalls = () => {
     const totalCalls = currentRound.reduce((sum, r) => sum + (typeof r.call === 'number' ? r.call : 0), 0);
     const minCalls = totalLeads - 2; 
@@ -121,11 +135,17 @@ export default function App() {
     setCallsLocked(true);
   };
 
+  // Submit round and calculate scores
   const submitRound = () => {
     if (!callsLocked) { alert('Please lock calls before submitting the round'); return; }
     const totalScored = currentRound.reduce((sum, r) => sum + (typeof r.scored === 'number' ? r.scored : 0), 0);
     if (totalScored !== totalLeads) { alert(`Total scored must equal ${totalLeads} leads`); return; }
-    const roundResults = currentRound.map(r => ({ ...r, call: typeof r.call === 'number' ? r.call : parseInt(r.call), scored: typeof r.scored === 'number' ? r.scored : parseInt(r.scored), roundScore: calculateRoundScore(r.call, r.scored) }));
+    const roundResults = currentRound.map(r => ({ 
+      ...r, 
+      call: typeof r.call === 'number' ? r.call : parseInt(r.call), 
+      scored: typeof r.scored === 'number' ? r.scored : parseInt(r.scored), 
+      roundScore: calculateRoundScore(r.call, r.scored) 
+    }));
     const updatedPlayers = players.map(p => {
       const result = roundResults.find(r => r.playerId === p.id);
       return { ...p, totalScore: p.totalScore + result.roundScore };
@@ -136,6 +156,7 @@ export default function App() {
     if (winner) setGameState('finished'); else initializeRound();
   };
 
+  // Reset game handler
   const handleResetGame = () => {
     setGameState('setup');
     setPlayers(players.map(p => ({ ...p, totalScore: 0 })));
@@ -146,6 +167,7 @@ export default function App() {
     setShowResetConfirm(false);
   };
 
+  // Share victory handler
   const handleShareVictory = async () => {
     const winner = players.reduce((max, p) => p.totalScore > max.totalScore ? p : max, players[0]);
     const sortedPlayers = [...players].sort((a, b) => b.totalScore - a.totalScore);
@@ -176,18 +198,18 @@ export default function App() {
         document.body.removeChild(textArea);
       }
     } catch (error) {
-      if (error.name === 'AbortError') {
-        return;
-      }
+      if (error.name === 'AbortError') return;
       alert('Unable to share. Please screenshot the results to share.');
     }
   };
 
+  // RENDER: Setup Screen
   if (gameState === 'setup') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-500 p-4">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-3xl shadow-2xl p-6 mb-4">
+            {/* Header with Info Button */}
             <div className="text-center mb-5">
               <button 
                 onClick={() => setShowRules(true)}
@@ -201,7 +223,9 @@ export default function App() {
               <h1 className="text-2xl font-black text-gray-800">Call Bridge</h1>
               <p className="text-gray-500 text-xs">Score Keeper</p>
             </div>
+
             <div className="space-y-4">
+              {/* Player Selection */}
               <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-2xl p-4">
                 <label className="block text-sm font-bold text-gray-700 mb-3">Select Players</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -237,6 +261,8 @@ export default function App() {
                   })}
                 </div>
               </div>
+
+              {/* Leads per Round */}
               <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-2xl p-4">
                 <label className="block text-sm font-bold text-gray-700 mb-3">Leads per Round</label>
                 <div className="flex items-center gap-3">
@@ -252,6 +278,8 @@ export default function App() {
                   Total Players: {players.length} | Total Cards: {players.length > 0 ? players.length * totalLeads : 0}
                 </p>
               </div>
+
+              {/* Winning Score */}
               <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 rounded-2xl p-4">
                 <label className="block text-sm font-bold text-gray-700 mb-3">Winning Score (10-20)</label>
                 <div className="flex items-center gap-3">
@@ -264,6 +292,8 @@ export default function App() {
                     className="w-12 h-12 bg-white rounded-xl font-bold text-xl text-gray-600 hover:bg-gray-50 active:scale-95 transition-transform shadow">+</button>
                 </div>
               </div>
+
+              {/* Start Game Button */}
               <button onClick={startGame} disabled={players.length < 3}
                 className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-white py-4 rounded-2xl font-bold text-lg hover:from-emerald-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl active:scale-95 flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed">
                 <Play size={24} fill="white" />Start Game
@@ -272,6 +302,7 @@ export default function App() {
           </div>
         </div>
         
+        {/* Rules Modal */}
         {showRules && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setShowRules(false)}>
             <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
@@ -324,8 +355,9 @@ export default function App() {
     );
   }
 
-  // Victory screen and playing screen code continues...
-  // (The rest of the component is in the artifact - this is just showing the structure)
+  // CONTINUED IN NEXT PART...
+  // Victory screen and Playing screen follow
+  // Copy the rest from the main artifact
 
   return null;
 }
